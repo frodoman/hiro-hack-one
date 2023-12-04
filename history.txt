@@ -1,0 +1,10 @@
+#V2
+(contract-call? .keys get-protocol-fee-percent )
+(contract-call? .keys set-protocol-fee-percent u300)
+(contract-call? .keys get-protocol-fee-percent )
+(contract-call? .keys get-buy-price tx-sender u200 )
+(contract-call? .keys buy-kes tx-sender u300 )
+(contract-call? .keys buy-keys tx-sender u300 )
+::get_assets_maps
+(contract-call? .keys sell-keys tx-sender u10 )
+::get_assets_maps

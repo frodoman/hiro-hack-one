@@ -7,11 +7,15 @@
 (define-constant ERR_TRANSFER_FAILED (err u2))
 (define-constant ERR_NOT_ENOUGTH_BALANCE (err u3))
 (define-constant ERR_NOT_CONTRACT_OWNER (err u4))
+(define-constant ERR_INVALID_FEE  (err u5))
 
-;; Storage
+;; Maps
 (define-map keysBalance { subject: principal, holder: principal } uint)
 (define-map keysSupply { subject: principal } uint)
 
+;; Vars
+(define-data-var protocolFeePercent uint u200)
+(define-data-var protocolFeeDestination principal tx-sender)
 
 ;; -----------------------
 ;; Read only functions
@@ -62,6 +66,10 @@
   )
 )
 
+(define-read-only (get-protocol-fee-percent)
+  (var-get protocolFeePercent)
+)
+
 ;; -----------------------
 ;; Public functions
 ;; -----------------------
@@ -76,21 +84,20 @@
     (asserts! (> amount u0) ERR_IVALID_AMOUNT)
     (asserts! (or (> supply u0) (is-eq tx-sender subject)) ERR_EMPTY_SUPPLY_OR_NOT_CONTRACT_OWNER)
 
-    ;; transfer fees 
-    ;;(try! (stx-transfer? protocolFeePercent tx-sender protocolFeeDestination))
-
     ;; transfer STX to contract 
     (try! (stx-transfer? price tx-sender (as-contract tx-sender)))
     (map-set keysBalance { subject: subject, holder: tx-sender }
         (+ (default-to u0 (get-keys-balance subject tx-sender)) amount)
     )
     (map-set keysSupply { subject: subject } (+ supply amount))
-    (ok true)
+
+    ;; transfer fees 
+    (send-fees tx-sender)
   )
 )
 
 ;; Sell keys to a subject (a user)
-;; Sell owned keys to another uer ?
+;; Sell owned keys to another uer
 (define-public (sell-keys (subject principal) (amount uint))
   (let
     (
@@ -104,21 +111,34 @@
     (asserts! (>= balance amount) ERR_NOT_ENOUGTH_BALANCE)
     (asserts! (or (> supply u0) (is-eq tx-sender subject)) ERR_EMPTY_SUPPLY_OR_NOT_CONTRACT_OWNER)
 
-    ;; transfer fees 
-    ;;(try! (stx-transfer? protocolFeePercent tx-sender protocolFeeDestination))
-
     (try! (as-contract (stx-transfer? price tx-sender recipient)))
  
     (map-set keysBalance { subject: subject, holder: tx-sender } (- balance amount))
     (map-set keysSupply { subject: subject } (- supply amount))
-    (ok true)
+    
+    ;; transfer fees
+    (send-fees tx-sender)
   )
 )
 
-;;(define-public (set-protocol-fee-percent (feePercent uint))
-  ;; Check if the caller is the contractOwner
-  ;;(asserts! (is-eq tx-sender DEPLOYER) ERR_NOT_CONTRACT_OWNER)
+(define-public (set-protocol-fee-percent (feePercent uint))
+  (begin  
+    (asserts! (> feePercent u0) ERR_INVALID_FEE)
+    ;; Check if the caller is the contractOwner
+    (asserts! (is-eq tx-sender DEPLOYER) ERR_NOT_CONTRACT_OWNER)
 
-  ;; Update the protocolFeePercent value
-  ;;(var-set protocolFeePercent feePercent)
-;;)
+    ;; Update the protocolFeePercent value
+    (ok (var-set protocolFeePercent feePercent))
+  )
+)
+
+;; -----------------------
+;; Private functions
+;; -----------------------
+(define-private (send-fees (sender principal))
+    ;; transfer fees 
+    (if (is-eq sender DEPLOYER) 
+      (ok true)
+      (stx-transfer? (var-get protocolFeePercent) tx-sender (var-get protocolFeeDestination))
+    )
+)
