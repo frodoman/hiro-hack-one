@@ -13,3 +13,4 @@
 (contract-call? .keys buy-keys tx-sender tx-sender)
 (contract-call? .keys buy-keys tx-sender u200)
 ::get_assets_maps
+(contract-call? .keys is-keyholder tx-sender tx-sender)
