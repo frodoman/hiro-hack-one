@@ -8,3 +8,8 @@
 ::get_assets_maps
 (contract-call? .keys sell-keys tx-sender u10 )
 ::get_assets_maps
+::help
+(contract-call? 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.keys is-keyholder tx-sender tx-sender)
+(contract-call? .keys buy-keys tx-sender tx-sender)
+(contract-call? .keys buy-keys tx-sender u200)
+::get_assets_maps

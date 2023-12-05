@@ -1,10 +1,11 @@
 import React, { ReactElement, useState } from 'react';
-import { StacksMainnet } from '@stacks/network';
+import { StacksDevnet } from '@stacks/network';
 import {
   callReadOnlyFunction,
   getAddressFromPublicKey,
   uintCV,
-  cvToValue
+  cvToValue,
+  principalCV
 } from '@stacks/transactions';
 import {
   AppConfig,
@@ -31,7 +32,7 @@ function App(): ReactElement {
   const userSession = new UserSession({ appConfig });
 
   const message = 'Hello, Hiro Hacks!';
-  const network = new StacksMainnet();
+  const network = new StacksDevnet();
 
   // Define your authentication options here
   const authOptions = {
@@ -64,11 +65,11 @@ function App(): ReactElement {
 
   const fetchReadOnly = async (senderAddress: string) => {
     // Define your contract details here
-    const contractAddress = 'SP000000000000000000002Q6VF78';
-    const contractName = 'pox-3';
-    const functionName = 'is-pox-active';
+    const contractAddress = 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM';
+    const contractName = 'keys';
+    const functionName = 'is-keyholder';
 
-    const functionArgs = [uintCV(10)];
+    const functionArgs = [principalCV(contractAddress), principalCV(contractAddress)];
 
     try {
       const result = await callReadOnlyFunction({
@@ -80,9 +81,9 @@ function App(): ReactElement {
         senderAddress
       });
       setHasFetchedReadOnly(true);
-      console.log(cvToValue(result));
+      console.log('fetchReadyOnly Result: ', cvToValue(result));
     } catch (error) {
-      console.error('Error fetching read-only function:', error);
+      console.error('fetchReadyOnly Error:', error);
     }
   };
 

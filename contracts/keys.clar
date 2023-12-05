@@ -74,21 +74,24 @@
 ;; Public functions
 ;; -----------------------
 
-;; buy keys from a subject (a user)
+;; buy keys for a subject (a user)
 (define-public (buy-keys (subject principal) (amount uint))
   (let
     (
+      (balance (default-to u0 (get-keys-balance subject tx-sender)))
       (supply (default-to u0 (get-keys-supply subject)))
       (price (get-price supply amount))
     )
+    ;; invalid amount
     (asserts! (> amount u0) ERR_IVALID_AMOUNT)
+
     (asserts! (or (> supply u0) (is-eq tx-sender subject)) ERR_EMPTY_SUPPLY_OR_NOT_CONTRACT_OWNER)
 
     ;; transfer STX to contract 
     (try! (stx-transfer? price tx-sender (as-contract tx-sender)))
-    (map-set keysBalance { subject: subject, holder: tx-sender }
-        (+ (default-to u0 (get-keys-balance subject tx-sender)) amount)
-    )
+
+    ;; Update maps
+    (map-set keysBalance { subject: subject, holder: tx-sender } (+ balance amount))
     (map-set keysSupply { subject: subject } (+ supply amount))
 
     ;; transfer fees 
@@ -96,14 +99,13 @@
   )
 )
 
-;; Sell keys to a subject (a user)
-;; Sell owned keys to another uer
+;; Sell keys of a subject
+;;
 (define-public (sell-keys (subject principal) (amount uint))
   (let
     (
       (balance (default-to u0 (get-keys-balance subject tx-sender)))
       (supply (default-to u0 (get-keys-supply subject)))
-      ;;(price (get-sell-price (- supply amount) amount))
       (price (get-sell-price subject amount))
       (recipient tx-sender)
     )
@@ -111,8 +113,10 @@
     (asserts! (>= balance amount) ERR_NOT_ENOUGTH_BALANCE)
     (asserts! (or (> supply u0) (is-eq tx-sender subject)) ERR_EMPTY_SUPPLY_OR_NOT_CONTRACT_OWNER)
 
+    ;;transfer STX from contract to tx-sender 
     (try! (as-contract (stx-transfer? price tx-sender recipient)))
  
+    ;; Update maps 
     (map-set keysBalance { subject: subject, holder: tx-sender } (- balance amount))
     (map-set keysSupply { subject: subject } (- supply amount))
     
