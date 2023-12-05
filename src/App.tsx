@@ -67,6 +67,30 @@ function App(): ReactElement {
     // Define your contract details here
     const contractAddress = 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM';
     const contractName = 'keys';
+    const functionName = 'get-protocol-fee-percent';
+
+    const functionArgs = []
+
+    try {
+      const result = await callReadOnlyFunction({
+        network,
+        contractAddress,
+        contractName,
+        functionName,
+        functionArgs,
+        senderAddress
+      });
+      setHasFetchedReadOnly(true);
+      console.log('fetchReadyOnly Result: ', cvToValue(result), typeof(cvToValue(result)));
+    } catch (error) {
+      console.error('fetchReadyOnly Error:', error);
+    }
+  };
+
+  const checkIsKeyHolder = async (senderAddress: string) => {
+    // Define your contract details here
+    const contractAddress = senderAddress;
+    const contractName = 'keys';
     const functionName = 'is-keyholder';
 
     const functionArgs = [principalCV(contractAddress), principalCV(contractAddress)];
@@ -82,6 +106,8 @@ function App(): ReactElement {
       });
       setHasFetchedReadOnly(true);
       console.log('fetchReadyOnly Result: ', cvToValue(result));
+      return cvToValue(result);
+
     } catch (error) {
       console.error('fetchReadyOnly Error:', error);
     }
@@ -102,9 +128,16 @@ function App(): ReactElement {
           if (verified) {
             // The signature is verified, so now we can check if the user is a keyholder
             setIsSignatureVerified(true);
+            const addr = getAddressFromPublicKey(publicKey, network.version);
+            const isKeyHolder = await checkIsKeyHolder(addr)
+
+            // TODO: - show chat room later
+            if(isKeyHolder) {
+              console.log('Showing chatroom...');
+            }
+
             console.log(
-              'Address derived from public key',
-              getAddressFromPublicKey(publicKey, network.version)
+              'Address derived from public key', addr, 'Is Key holder: ', isKeyHolder
             );
           }
         }
@@ -130,7 +163,7 @@ function App(): ReactElement {
               <div className="flex justify-between w-full">
                 <Button
                   onClick={disconnectWallet}
-                  variant="link"
+                  variant="primary"
                   className="h-auto p-0 text-base"
                 >
                   1. Disconnect wallet
@@ -141,7 +174,7 @@ function App(): ReactElement {
             ) : (
               <Button
                 onClick={connectWallet}
-                variant="link"
+                variant="primary"
                 className="h-auto p-0 text-base"
               >
                 1. Connect your wallet
