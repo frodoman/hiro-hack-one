@@ -20,6 +20,8 @@
 ;; -----------------------
 ;; Read only functions
 ;; -----------------------
+
+;; calculate a price based on the supply and amount required
 (define-read-only (get-price (supply uint) (amount uint))
   (let
     (
@@ -31,20 +33,24 @@
   )
 )
 
+;; check if a holder has any keys against a subject 
 (define-read-only (is-keyholder (subject principal) (holder principal))
     (>= (default-to u0 (map-get? keysBalance { subject: subject, holder: holder })) u1)
 )
 
+;; return key balance of a holder for a subject
 (define-read-only (get-keys-balance (subject principal) (holder principal))
     ;;Return the keysBalance for the given subject and holder
     (default-to u0  (map-get? keysBalance { subject: subject, holder: holder }))
 )
 
+;; return the current key supply of the subject 
 (define-read-only (get-keys-supply (subject principal))
     ;; Return the keysSupply for the given subject
     (default-to u0 (map-get? keysSupply {subject: subject }))
 )
 
+;; calculate the buy price for a subject and key amount
 (define-read-only (get-buy-price (subject principal) (amount uint))
   ;; Implement buy price logic
   (let  
@@ -55,6 +61,7 @@
   )
 )
 
+;; calculate the sell price for a subject and key amount 
 (define-read-only (get-sell-price (subject principal) (amount uint))
   ;; Implement sell price logic
   (let 
@@ -66,6 +73,7 @@
   )
 )
 
+;; return protocol fees
 (define-read-only (get-protocol-fee-percent)
   (var-get protocolFeePercent)
 )
@@ -74,7 +82,19 @@
 ;; Public functions
 ;; -----------------------
 
-;; buy keys for a subject (a user)
+;; update protocol fees 
+(define-public (set-protocol-fee-percent (feePercent uint))
+  (begin  
+    (asserts! (> feePercent u0) ERR_INVALID_FEE)
+    ;; Check if the caller is the contractOwner
+    (asserts! (is-eq tx-sender DEPLOYER) ERR_NOT_CONTRACT_OWNER)
+
+    ;; Update the protocolFeePercent value
+    (ok (var-set protocolFeePercent feePercent))
+  )
+)
+
+;; buy keys for a subject (a user) with key amount 
 (define-public (buy-keys (subject principal) (amount uint))
   (let
     (
@@ -95,11 +115,11 @@
     (map-set keysSupply { subject: subject } (+ supply amount))
 
     ;; transfer fees 
-    (send-fees tx-sender)
+    (transfer-fees tx-sender)
   )
 )
 
-;; Sell keys of a subject
+;; Sell keys of a subject with key amount
 ;;
 (define-public (sell-keys (subject principal) (amount uint))
   (let
@@ -121,25 +141,16 @@
     (map-set keysSupply { subject: subject } (- supply amount))
     
     ;; transfer fees
-    (send-fees tx-sender)
-  )
-)
-
-(define-public (set-protocol-fee-percent (feePercent uint))
-  (begin  
-    (asserts! (> feePercent u0) ERR_INVALID_FEE)
-    ;; Check if the caller is the contractOwner
-    (asserts! (is-eq tx-sender DEPLOYER) ERR_NOT_CONTRACT_OWNER)
-
-    ;; Update the protocolFeePercent value
-    (ok (var-set protocolFeePercent feePercent))
+    (transfer-fees tx-sender)
   )
 )
 
 ;; -----------------------
 ;; Private functions
 ;; -----------------------
-(define-private (send-fees (sender principal))
+
+;; transfer fees to deployer
+(define-private (transfer-fees (sender principal))
     ;; transfer fees 
     (if (is-eq sender DEPLOYER) 
       (ok true)
