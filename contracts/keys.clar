@@ -37,19 +37,19 @@
 
 (define-read-only (get-keys-balance (subject principal) (holder principal))
     ;;Return the keysBalance for the given subject and holder
-    (map-get? keysBalance { subject: subject, holder: holder })
+    (default-to u0  (map-get? keysBalance { subject: subject, holder: holder }))
 )
 
 (define-read-only (get-keys-supply (subject principal))
     ;; Return the keysSupply for the given subject
-    (map-get? keysSupply {subject: subject })
+    (default-to u0 (map-get? keysSupply {subject: subject }))
 )
 
 (define-read-only (get-buy-price (subject principal) (amount uint))
   ;; Implement buy price logic
   (let  
     (
-        (supply (default-to u0 (get-keys-supply subject)))
+        (supply (get-keys-supply subject))
     )
     (get-price supply amount)
   )
@@ -59,8 +59,8 @@
   ;; Implement sell price logic
   (let 
     (
-      (balance (default-to u0 (get-keys-balance subject tx-sender)))
-      (supply (default-to u0 (get-keys-supply subject)))
+      (balance (get-keys-balance subject tx-sender))
+      (supply (get-keys-supply subject))
     )
     (get-price (- supply amount) amount)
   )
@@ -78,8 +78,8 @@
 (define-public (buy-keys (subject principal) (amount uint))
   (let
     (
-      (balance (default-to u0 (get-keys-balance subject tx-sender)))
-      (supply (default-to u0 (get-keys-supply subject)))
+      (balance (get-keys-balance subject tx-sender))
+      (supply (get-keys-supply subject))
       (price (get-price supply amount))
     )
     ;; invalid amount
@@ -104,8 +104,8 @@
 (define-public (sell-keys (subject principal) (amount uint))
   (let
     (
-      (balance (default-to u0 (get-keys-balance subject tx-sender)))
-      (supply (default-to u0 (get-keys-supply subject)))
+      (balance (get-keys-balance subject tx-sender))
+      (supply (get-keys-supply subject))
       (price (get-sell-price subject amount))
       (recipient tx-sender)
     )

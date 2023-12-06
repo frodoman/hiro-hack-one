@@ -72,7 +72,7 @@ Clarinet.test({
 
 
 Clarinet.test({
-    name: "keys-003: Ensure that others can not buy keys before deployer buys.",
+    name: "keys-004: Ensure that others can not buy keys before deployer buys.",
     async fn(chain: Chain, accounts: Map<string, Account>) {
         // arrange: set up the chain, state, and other required elements
         let deployer = accounts.get("deployer")!.address;
@@ -85,6 +85,41 @@ Clarinet.test({
 
         const result = block.receipts[0].result;
         result.expectErr().expectUint(1);
+    },
+});
+
+Clarinet.test({
+    name: "keys-005: Ensure that balance is updated after buying a key.",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        // deployer address
+        let deployer = accounts.get("deployer")!.address;
+
+        //balance should be u0 before buying
+        chain.mineEmptyBlockUntil(1)
+
+        // call get-price function
+        const funCallBefore = chain.callReadOnlyFn(
+            'keys',
+            'get-keys-balance',
+            [types.principal(deployer), types.principal(deployer)],
+            deployer
+        );
+
+        funCallBefore.result.expectUint(0)
+
+        // buy some keys 
+        chain.mineBlock([
+           Tx.contractCall('keys', 'buy-keys', [types.principal(deployer), types.uint(200)], deployer)
+        ]);
+
+        // call get-price function
+        const funCallAfter = chain.callReadOnlyFn(
+            'keys',
+            'get-keys-balance',
+            [types.principal(deployer), types.principal(deployer)],
+            deployer
+        );
+        funCallAfter.result.expectUint(200)
     },
 });
 
