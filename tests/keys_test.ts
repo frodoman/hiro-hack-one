@@ -265,25 +265,26 @@ Clarinet.test({
         // deployer address
         let deployer = accounts.get("deployer")!.address;
         let wallet_1 = accounts.get("wallet_1")!.address;
+        const deployerPrincipal = types.principal(deployer);
         const sellAmount = types.uint(100);
         const protocolFee = 200
 
         // buy some keys 
         chain.mineBlock([
-            Tx.contractCall('keys', 'buy-keys', [types.principal(deployer), types.uint(500)], deployer), 
-            Tx.contractCall('keys', 'buy-keys', [types.principal(deployer), types.uint(200)], wallet_1), 
+            Tx.contractCall('keys', 'buy-keys', [deployerPrincipal, types.uint(500)], deployer), 
+            Tx.contractCall('keys', 'buy-keys', [deployerPrincipal, types.uint(200)], wallet_1), 
         ]);
 
         // wallet_1's balance before selling
         const balanceBefore = chain.getAssetsMaps().assets["STX"][wallet_1];
 
         // check the selling price 
-        const funCall = chain.callReadOnlyFn('keys','get-sell-price',[types.principal(deployer), sellAmount],deployer);
+        const funCall = chain.callReadOnlyFn('keys','get-sell-price',[deployerPrincipal, sellAmount],deployer);
         const sellPrice = funCall.result;
 
         // sell some keys 
         chain.mineBlock([
-           Tx.contractCall('keys', 'sell-keys', [types.principal(deployer), types.uint(100)], wallet_1), 
+           Tx.contractCall('keys', 'sell-keys', [deployerPrincipal, types.uint(100)], wallet_1), 
         ]);
 
         // balance after selling
@@ -300,23 +301,24 @@ Clarinet.test({
     async fn(chain: Chain, accounts: Map<string, Account>) {
         // deployer address
         const deployer = accounts.get("deployer")!.address;
+        const deployerPrincipal = types.principal(deployer);
         let wallet_1 = accounts.get("wallet_1")!.address;
 
         // buy some keys 
         const block1 = chain.mineBlock([
-            Tx.contractCall('keys', 'buy-keys', [types.principal(deployer), types.uint(300)], deployer), 
-            Tx.contractCall('keys', 'buy-keys', [types.principal(deployer), types.uint(100)], wallet_1), 
+            Tx.contractCall('keys', 'buy-keys', [deployerPrincipal, types.uint(300)], deployer), 
+            Tx.contractCall('keys', 'buy-keys', [deployerPrincipal, types.uint(100)], wallet_1), 
         ]);
         block1.receipts[0].result.expectOk()
 
         // sell some keys 
         const block2 = chain.mineBlock([
-           Tx.contractCall('keys', 'sell-keys', [types.principal(deployer), types.uint(100)], wallet_1),
+           Tx.contractCall('keys', 'sell-keys', [deployerPrincipal, types.uint(100)], wallet_1),
         ]);
         block2.receipts[0].result.expectOk()
 
         // get supply 
-        const funCall = chain.callReadOnlyFn('keys', 'get-keys-supply', [types.principal(deployer)], deployer);
+        const funCall = chain.callReadOnlyFn('keys', 'get-keys-supply', [deployerPrincipal], deployer);
         console.log("Supply after selling: ", funCall.result);
         assertEquals(funCall.result, types.uint(300));
     },
@@ -359,19 +361,21 @@ Clarinet.test({
     async fn(chain: Chain, accounts: Map<string, Account>) {
         // deployer address
         let deployer = accounts.get("deployer")!.address;
+        const deployerPrincipal = types.principal(deployer);
+
         let wallet_1 = accounts.get("wallet_1")!.address;
         const buyAmount = types.uint(200);
         const sellAmount = types.uint(210);
 
         // buy some keys 
         chain.mineBlock([
-            Tx.contractCall('keys', 'buy-keys', [types.principal(deployer), types.uint(500)], deployer), 
-            Tx.contractCall('keys', 'buy-keys', [types.principal(deployer), buyAmount], wallet_1), 
+            Tx.contractCall('keys', 'buy-keys', [deployerPrincipal, types.uint(500)], deployer), 
+            Tx.contractCall('keys', 'buy-keys', [deployerPrincipal, buyAmount], wallet_1), 
         ]);
 
         // sell some keys 
         const block = chain.mineBlock([
-           Tx.contractCall('keys', 'sell-keys', [types.principal(deployer), sellAmount], wallet_1), 
+           Tx.contractCall('keys', 'sell-keys', [deployerPrincipal, sellAmount], wallet_1), 
         ]);
 
         // balance after selling
