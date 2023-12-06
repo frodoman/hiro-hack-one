@@ -2,6 +2,8 @@ import React, { ReactElement, useState } from 'react';
 import { StacksDevnet } from '@stacks/network';
 import {
   callReadOnlyFunction,
+  makeStandardSTXPostCondition,
+  makeContractCall,
   getAddressFromPublicKey,
   uintCV,
   cvToValue,
@@ -26,6 +28,7 @@ function App(): ReactElement {
   const [address, setAddress] = useState('');
   const [isSignatureVerified, setIsSignatureVerified] = useState(false);
   const [hasFetchedReadOnly, setHasFetchedReadOnly] = useState(false);
+  const [isKeyHolder, setIsKeyHolder] = useState(false);
 
   // Initialize your app configuration and user session here
   const appConfig = new AppConfig(['store_write', 'publish_data']);
@@ -131,6 +134,9 @@ function App(): ReactElement {
             const addr = getAddressFromPublicKey(publicKey, network.version);
             const isKeyHolder = await checkIsKeyHolder(addr)
 
+            setAddress(addr)
+            setIsKeyHolder(isKeyHolder);
+
             // TODO: - show chat room later
             if(isKeyHolder) {
               console.log('Showing chatroom...');
@@ -142,6 +148,39 @@ function App(): ReactElement {
           }
         }
       });
+    }
+  };
+  /*
+  depositContract 
+  Call the buy-keys function from the keys contract to initialise the process.
+
+  NOTE: Haven't fully tested this function yet, still working in progress. 
+  */
+  const depositContract = async (senderAddress: string) => {
+    // Define your contract details here
+    const contractAddress = senderAddress;
+    const contractName = 'keys';
+    const functionName = 'buy-keys';
+
+    const functionArgs = [principalCV(contractAddress), uintCV(500)];
+
+    const txOptions = {
+      contractAddress: senderAddress,
+      contractName: 'keys',
+      functionName: 'buy-keys',
+      functionArgs: functionArgs,
+      senderKey: '753b7cc01a1a2e86221266a154af739463fce51219d97e4f856cd7200c3bd2a601',
+      validateWithAbi: true,
+      sponsored: true,
+    };
+
+    try {
+      const result = await makeContractCall(txOptions);
+      console.log('deposit contract result: ', cvToValue(result));
+      return cvToValue(result);
+
+    } catch (error) {
+      console.error('fetchReadyOnly Error:', error);
     }
   };
 
@@ -194,6 +233,7 @@ function App(): ReactElement {
             </div>
 
             {userSession.isUserSignedIn() ? (
+              // User has signed in
               <div className="flex justify-between w-full">
                 <Button
                   onClick={() => fetchReadOnly(address)}
@@ -210,8 +250,19 @@ function App(): ReactElement {
                     </Badge>
                   </span>
                 )}
+
+                <Button
+                  onClick={() => depositContract(address)}
+                  variant="success"
+                >
+                  4. Buy 500 mSTX keys
+                  <ArrowRight size={15} className="ml-1" />
+                </Button>
               </div>
+
+
             ) : (
+              // User not signed in
               <div className="flex justify-between w-full">
                 <Button
                   variant="link"
