@@ -1,8 +1,8 @@
 import { Clarinet, Tx, Chain, Account, types } from 'https://deno.land/x/clarinet@v1.0.6/index.ts';
-import { assertEquals, assertStringIncludes } from 'https://deno.land/std@0.90.0/testing/asserts.ts';
+import { assertEquals, assertNotEquals, assertStringIncludes } from 'https://deno.land/std@0.90.0/testing/asserts.ts';
 
 Clarinet.test({
-    name: "keys-001: Ensure that deployer is not key holder after deployment.",
+    name: "keys-01: Ensure that deployer is not key holder after deployment.",
     async fn(chain: Chain, accounts: Map<string, Account>) {
         // deployer wallet address
         let deployer = accounts.get("deployer")!.address;
@@ -25,7 +25,7 @@ Clarinet.test({
 });
 
 Clarinet.test({
-    name: "keys-002: Ensure that logic to calculate price is correct.",
+    name: "keys-02: Ensure that logic to calculate price is correct.",
     async fn(chain: Chain, accounts: Map<string, Account>) {
         // deployer wallet address
         let deployer = accounts.get("deployer")!.address;
@@ -48,7 +48,7 @@ Clarinet.test({
 });
 
 Clarinet.test({
-    name: "keys-003: Ensure that deployer can buy keys for himself.",
+    name: "keys-03-buy: Ensure that deployer can buy keys for himself.",
     async fn(chain: Chain, accounts: Map<string, Account>) {
         // arrange: set up the chain, state, and other required elements
         let deployer = accounts.get("deployer")!.address;
@@ -71,7 +71,7 @@ Clarinet.test({
 
 
 Clarinet.test({
-    name: "keys-004: Ensure that others can not buy keys before deployer buys.",
+    name: "keys-04-buy: Ensure that others can not buy keys before deployer buys.",
     async fn(chain: Chain, accounts: Map<string, Account>) {
         // arrange: set up the chain, state, and other required elements
         let deployer = accounts.get("deployer")!.address;
@@ -88,7 +88,7 @@ Clarinet.test({
 });
 
 Clarinet.test({
-    name: "keys-005: Ensure that amount is bigger than 0 for buying keys",
+    name: "keys-05-buy: Ensure that amount is bigger than 0 for buying keys",
     async fn(chain: Chain, accounts: Map<string, Account>) {
         // arrange: set up the chain, state, and other required elements
         let deployer = accounts.get("deployer")!.address;
@@ -104,7 +104,7 @@ Clarinet.test({
 });
 
 Clarinet.test({
-    name: "keys-006: Ensure that balance is updated after buying a key.",
+    name: "keys-06-buy: Ensure that balance is updated after buying a key.",
     async fn(chain: Chain, accounts: Map<string, Account>) {
         // deployer address
         let deployer = accounts.get("deployer")!.address;
@@ -138,7 +138,7 @@ Clarinet.test({
 });
 
 Clarinet.test({
-    name: "keys-007: Ensure that kyes supply is updated after buying.",
+    name: "keys-07-buy: Ensure that kyes supply is updated after buying.",
     async fn(chain: Chain, accounts: Map<string, Account>) {
         // deployer address
         let deployer = accounts.get("deployer")!.address;
@@ -172,7 +172,7 @@ Clarinet.test({
 });
 
 Clarinet.test({
-    name: "keys-008: Ensure that protocol fee can be updated.",
+    name: "keys-08-fee: Ensure that protocol fee can be updated.",
     async fn(chain: Chain, accounts: Map<string, Account>) {
         // deployer address
         let deployer = accounts.get("deployer")!.address;
@@ -206,7 +206,7 @@ Clarinet.test({
 });
 
 Clarinet.test({
-    name: "keys-009: Ensure that only the deployer can update protocol fee.",
+    name: "keys-09-fee: Ensure that only the deployer can update protocol fee.",
     async fn(chain: Chain, accounts: Map<string, Account>) {
         // deployer address
         let wallet_1 = accounts.get("wallet_1")!.address;
@@ -224,7 +224,7 @@ Clarinet.test({
 
 
 Clarinet.test({
-    name: "keys-010: Ensure that protocol fee can not be set to u0.",
+    name: "keys-10-fee: Ensure that protocol fee can not be set to u0.",
     async fn(chain: Chain, accounts: Map<string, Account>) {
         // deployer address
         let deployer = accounts.get("deployer")!.address;
@@ -239,3 +239,31 @@ Clarinet.test({
         result.expectErr().expectUint(5)
     },
 });
+
+Clarinet.test({
+    name: "keys-11-fee: Ensure that deployer receive the fee after another user buying a key.",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        // deployer address
+        let deployer = accounts.get("deployer")!.address;
+        let wallet_1 = accounts.get("wallet_1")!.address;
+
+        chain.mineBlock([
+            Tx.contractCall('keys', 'buy-keys', [types.principal(deployer), types.uint(200)], deployer), 
+        ]);
+
+        // deployer balance before wallet_1 buys a key
+        const balanceBefore = chain.getAssetsMaps().assets["STX"][deployer];
+
+        // buy some keys 
+        chain.mineBlock([
+           Tx.contractCall('keys', 'buy-keys', [types.principal(deployer), types.uint(300)], wallet_1), 
+        ]);
+
+        // call get-price function
+        const balanceAfter = chain.getAssetsMaps().assets["STX"][deployer];
+
+        assertNotEquals(balanceAfter, balanceBefore);
+        assertEquals(balanceAfter - balanceBefore, 200);
+    },
+});
+
