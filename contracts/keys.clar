@@ -3,7 +3,7 @@
 
 ;; Errors 
 (define-constant ERR_IVALID_AMOUNT (err u0))
-(define-constant ERR_EMPTY_SUPPLY_OR_NOT_CONTRACT_OWNER (err u1))
+(define-constant ERR_EMPTY_SUPPLY_OR_NOT_SUBJECT (err u1))
 (define-constant ERR_TRANSFER_FAILED (err u2))
 (define-constant ERR_NOT_ENOUGTH_BALANCE (err u3))
 (define-constant ERR_NOT_CONTRACT_OWNER (err u4))
@@ -104,8 +104,8 @@
     )
     ;; invalid amount
     (asserts! (> amount u0) ERR_IVALID_AMOUNT)
-
-    (asserts! (or (> supply u0) (is-eq tx-sender subject)) ERR_EMPTY_SUPPLY_OR_NOT_CONTRACT_OWNER)
+    ;; not enough supply
+    (asserts! (or (> supply u0) (is-eq tx-sender subject)) ERR_EMPTY_SUPPLY_OR_NOT_SUBJECT)
 
     ;; transfer STX to contract 
     (try! (stx-transfer? price tx-sender (as-contract tx-sender)))
@@ -129,9 +129,9 @@
       (price (get-sell-price subject amount))
       (recipient tx-sender)
     )
-    ;; must have enough balance 
+    ;; must have enough balance or supply
     (asserts! (>= balance amount) ERR_NOT_ENOUGTH_BALANCE)
-    (asserts! (or (> supply u0) (is-eq tx-sender subject)) ERR_EMPTY_SUPPLY_OR_NOT_CONTRACT_OWNER)
+    (asserts! (or (> supply u0) (is-eq tx-sender subject)) ERR_EMPTY_SUPPLY_OR_NOT_SUBJECT)
 
     ;;transfer STX from contract to tx-sender 
     (try! (as-contract (stx-transfer? price tx-sender recipient)))
