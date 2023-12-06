@@ -138,10 +138,11 @@ Clarinet.test({
 });
 
 Clarinet.test({
-    name: "keys-07-buy: Ensure that kyes supply is updated after buying.",
+    name: "keys-07-buy: Ensure that keys supply is updated after buying.",
     async fn(chain: Chain, accounts: Map<string, Account>) {
         // deployer address
         let deployer = accounts.get("deployer")!.address;
+        let wallet_1 = accounts.get("wallet_1")!.address;
 
         chain.mineEmptyBlockUntil(1)
 
@@ -157,17 +158,18 @@ Clarinet.test({
 
         // buy some keys 
         chain.mineBlock([
-           Tx.contractCall('keys', 'buy-keys', [types.principal(deployer), types.uint(200)], deployer)
+           Tx.contractCall('keys', 'buy-keys', [types.principal(deployer), types.uint(200)], deployer),
+           Tx.contractCall('keys', 'buy-keys', [types.principal(deployer), types.uint(300)], wallet_1),
         ]);
 
-        // call get-price function
+        // call get supply function
         const funCallAfter = chain.callReadOnlyFn(
             'keys',
             'get-keys-supply',
             [types.principal(deployer)],
             deployer
         );
-        funCallAfter.result.expectUint(200)
+        funCallAfter.result.expectUint(500)
     },
 });
 
@@ -258,7 +260,7 @@ Clarinet.test({
 });
 
 Clarinet.test({
-    name: "keys-12-sell: Ensure that tx-sender's balance is updated correctly after selling a key.",
+    name: "keys-12-sell: Ensure that tx-sender's STX balance is updated correctly after selling a key.",
     async fn(chain: Chain, accounts: Map<string, Account>) {
         // deployer address
         let deployer = accounts.get("deployer")!.address;
@@ -289,5 +291,81 @@ Clarinet.test({
 
         assertNotEquals(balanceAfter, balanceBefore);
         assertEquals(types.uint(balanceAfter - balanceBefore + protocolFee), sellPrice);
+    },
+});
+
+Clarinet.test({
+    name: "keys-13-sell: Ensure that selling more than in the balance is not allowed.",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        // deployer address
+        let deployer = accounts.get("deployer")!.address;
+        let wallet_1 = accounts.get("wallet_1")!.address;
+        const buyAmount = types.uint(200);
+        const sellAmount = types.uint(210);
+
+        // buy some keys 
+        chain.mineBlock([
+            Tx.contractCall('keys', 'buy-keys', [types.principal(deployer), types.uint(500)], deployer), 
+            Tx.contractCall('keys', 'buy-keys', [types.principal(deployer), buyAmount], wallet_1), 
+        ]);
+
+        // sell some keys 
+        const block = chain.mineBlock([
+           Tx.contractCall('keys', 'sell-keys', [types.principal(deployer), sellAmount], wallet_1), 
+        ]);
+
+        // balance after selling
+        block.receipts[0].result.expectErr().expectUint(3);
+    },
+});
+
+
+Clarinet.test({
+    name: "keys-14-sell: Ensure that supply is updated correctly after selling.",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        // deployer address
+        const deployer = accounts.get("deployer")!.address;
+        let wallet_1 = accounts.get("wallet_1")!.address;
+
+        // buy some keys 
+        const block1 = chain.mineBlock([
+            Tx.contractCall('keys', 'buy-keys', [types.principal(deployer), types.uint(300)], deployer), 
+            Tx.contractCall('keys', 'buy-keys', [types.principal(deployer), types.uint(100)], wallet_1), 
+        ]);
+        block1.receipts[0].result.expectOk()
+
+        // sell some keys 
+        const block2 = chain.mineBlock([
+           Tx.contractCall('keys', 'sell-keys', [types.principal(deployer), types.uint(100)], wallet_1),
+        ]);
+        block2.receipts[0].result.expectOk()
+
+        // get supply 
+        const funCall = chain.callReadOnlyFn('keys', 'get-keys-supply', [types.principal(deployer)], deployer);
+        console.log("Supply after selling: ", funCall.result);
+        assertEquals(funCall.result, types.uint(300));
+    },
+});
+
+Clarinet.test({
+    name: "keys-14-sell: Ensure that selling is not allowed if no supply.",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        // deployer address
+        const deployer = accounts.get("deployer")!.address;
+        let wallet_1 = accounts.get("wallet_1")!.address;
+
+        // buy some keys 
+        const block1 = chain.mineBlock([
+            Tx.contractCall('keys', 'buy-keys', [types.principal(deployer), types.uint(300)], deployer), 
+            Tx.contractCall('keys', 'buy-keys', [types.principal(deployer), types.uint(100)], wallet_1), 
+        ]);
+        block1.receipts[0].result.expectOk()
+
+        // sell some keys 
+        const block2 = chain.mineBlock([
+           Tx.contractCall('keys', 'sell-keys', [types.principal(deployer), types.uint(300)], deployer),
+           Tx.contractCall('keys', 'sell-keys', [types.principal(deployer), types.uint(100)], wallet_1),
+        ]);
+        block2.receipts[0].result.expectErr().expectUint(1);
     },
 });
