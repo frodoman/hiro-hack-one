@@ -181,12 +181,7 @@ Clarinet.test({
         chain.mineEmptyBlockUntil(1)
 
         // fee should be u200 by default
-        const funCallBefore = chain.callReadOnlyFn(
-            'keys',
-            readFunName,
-            [],
-            deployer
-        );
+        const funCallBefore = chain.callReadOnlyFn('keys', readFunName, [], deployer );
         funCallBefore.result.expectUint(200)
 
         // update the fee
@@ -195,12 +190,7 @@ Clarinet.test({
         ]);
 
         // call get-price function
-        const funCallAfter = chain.callReadOnlyFn(
-            'keys',
-            readFunName,
-            [],
-            deployer
-        );
+        const funCallAfter = chain.callReadOnlyFn('keys',readFunName,[], deployer);
         funCallAfter.result.expectUint(500)
     },
 });
@@ -216,7 +206,7 @@ Clarinet.test({
            Tx.contractCall('keys', 'set-protocol-fee-percent', [types.uint(500)], wallet_1)
         ]);
 
-        // call get-price function
+        // verify
         const result = block.receipts[0].result;
         result.expectErr().expectUint(4)
     },
@@ -234,7 +224,7 @@ Clarinet.test({
            Tx.contractCall('keys', 'set-protocol-fee-percent', [types.uint(0)], deployer)
         ]);
 
-        // call get-price function
+        // verify
         const result = block.receipts[0].result;
         result.expectErr().expectUint(5)
     },
@@ -259,7 +249,7 @@ Clarinet.test({
            Tx.contractCall('keys', 'buy-keys', [types.principal(deployer), types.uint(300)], wallet_1), 
         ]);
 
-        // call get-price function
+        // balance after buying
         const balanceAfter = chain.getAssetsMaps().assets["STX"][deployer];
 
         assertNotEquals(balanceAfter, balanceBefore);
@@ -268,7 +258,7 @@ Clarinet.test({
 });
 
 Clarinet.test({
-    name: "keys-12-sell: Ensure that deployer receive the fee after another user buying a key.",
+    name: "keys-12-sell: Ensure that tx-sender's balance is updated correctly after selling a key.",
     async fn(chain: Chain, accounts: Map<string, Account>) {
         // deployer address
         let deployer = accounts.get("deployer")!.address;
@@ -276,29 +266,25 @@ Clarinet.test({
         const sellAmount = types.uint(100);
         const protocolFee = 200
 
+        // buy some keys 
         chain.mineBlock([
             Tx.contractCall('keys', 'buy-keys', [types.principal(deployer), types.uint(500)], deployer), 
             Tx.contractCall('keys', 'buy-keys', [types.principal(deployer), types.uint(200)], wallet_1), 
         ]);
 
-        // deployer balance before wallet_1 buys a key
+        // wallet_1's balance before selling
         const balanceBefore = chain.getAssetsMaps().assets["STX"][wallet_1];
 
         // check the selling price 
-        const funCall = chain.callReadOnlyFn(
-            'keys',
-            'get-sell-price',
-            [types.principal(deployer), sellAmount],
-            deployer
-        );
+        const funCall = chain.callReadOnlyFn('keys','get-sell-price',[types.principal(deployer), sellAmount],deployer);
         const sellPrice = funCall.result;
 
-        // buy some keys 
+        // sell some keys 
         chain.mineBlock([
            Tx.contractCall('keys', 'sell-keys', [types.principal(deployer), types.uint(100)], wallet_1), 
         ]);
 
-        // call get-price function
+        // balance after selling
         const balanceAfter = chain.getAssetsMaps().assets["STX"][wallet_1];
 
         assertNotEquals(balanceAfter, balanceBefore);
