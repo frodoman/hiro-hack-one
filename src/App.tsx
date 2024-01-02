@@ -1,5 +1,6 @@
 import React, { ReactElement, useState } from 'react';
 import { StacksDevnet } from '@stacks/network';
+import { openContractCall, openContractDeploy } from '@stacks/connect';
 import {
   callReadOnlyFunction,
   makeStandardSTXPostCondition,
@@ -68,7 +69,7 @@ function App(): ReactElement {
 
   const fetchReadOnly = async (senderAddress: string) => {
     // Define your contract details here
-    const contractAddress = 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM';
+    const contractAddress = 'STD04J09CYMWBG006T212ANAVJST3HWJE57B54SK';
     const contractName = 'keys';
     const functionName = 'get-protocol-fee-percent';
 
@@ -150,6 +151,27 @@ function App(): ReactElement {
       });
     }
   };
+
+    const deployDevContract = () => {
+    if (userSession.isUserSignedIn()) {
+      const codeBody = '(begin (print "hello, world"))';
+
+      openContractDeploy({
+        contractName: 'keys',
+        codeBody,
+        appDetails: {
+          name: 'Keys App',
+          icon: window.location.origin + '/my-app-logo.svg',
+        },
+        onFinish: data => {
+          console.log('Stacks Transaction:', data.stacksTransaction);
+          console.log('Transaction ID:', data.txId);
+          console.log('Raw transaction:', data.txRaw);
+        },
+      });
+    }
+  };
+
   /*
   depositContract 
   Call the buy-keys function from the keys contract to initialise the process.
@@ -158,29 +180,43 @@ function App(): ReactElement {
   */
   const depositContract = async (senderAddress: string) => {
     // Define your contract details here
-    const contractAddress = senderAddress;
+    //const { doContractCall } = useConnect();
+    const deployerAddress = 'STD04J09CYMWBG006T212ANAVJST3HWJE57B54SK';
     const contractName = 'keys';
     const functionName = 'buy-keys';
 
-    const functionArgs = [principalCV(contractAddress), uintCV(500)];
+    const functionArgs = [principalCV(deployerAddress), uintCV(500)];
 
     const txOptions = {
-      contractAddress: senderAddress,
+      contractAddress: deployerAddress,
       contractName: 'keys',
       functionName: 'buy-keys',
       functionArgs: functionArgs,
-      senderKey: '753b7cc01a1a2e86221266a154af739463fce51219d97e4f856cd7200c3bd2a601',
-      validateWithAbi: true,
-      sponsored: true,
+      network: network,
+      appDetails: {
+        name: 'My App',
+        icon: window.location.origin + '/my-app-logo.svg',
+      },
+      onFinish: data => {
+        console.log('Stacks Transaction:', data.stacksTransaction);
+        console.log('Transaction ID:', data.txId);
+        console.log('Raw transaction:', data.txRaw);
+      },
+      //senderKey: '753b7cc01a1a2e86221266a154af739463fce51219d97e4f856cd7200c3bd2a601',
+      //validateWithAbi: false,
+      //sponsored: true,
     };
 
+    console.log("Sender: ", senderAddress)
+    console.log("Receiver: ", )
+
     try {
-      const result = await makeContractCall(txOptions);
-      console.log('deposit contract result: ', cvToValue(result));
-      return cvToValue(result);
+      const result = await openContractCall(txOptions);
+      console.log('Deposit contract result: ', result);
+      return result;
 
     } catch (error) {
-      console.error('fetchReadyOnly Error:', error);
+      console.error('Deposit contract Error:', error);
     }
   };
 
